@@ -4,10 +4,11 @@
 "use strict";
 
 const { Component } = require("devtools/client/shared/vendor/react");
+const { range } = require("devtools/client/shared/vendor/lodash");
 const ReactDOM = require("devtools/client/shared/vendor/react-dom");
 const dom = require("devtools/client/shared/vendor/react-dom-factories");
 const PropTypes = require("devtools/client/shared/vendor/react-prop-types");
-const {sortBy} = require("devtools/client/shared/vendor/lodash");
+const { sortBy } = require("devtools/client/shared/vendor/lodash");
 
 const { LocalizationHelper } = require("devtools/shared/l10n");
 const L10N = new LocalizationHelper(
@@ -44,19 +45,19 @@ function CommandButton({ img, className, onClick }) {
     next: "next",
     previous: "next",
     pause: "pause",
-    play: "resume",
+    play: "resume"
   };
 
   return dom.div(
     {
       className: `command-button ${className}`,
-      onClick,
+      onClick
     },
     dom.img({
       className: `btn ${img}`,
       style: {
-        maskImage: `url("${imgResource}/${images[img]}.svg")`,
-      },
+        maskImage: `url("${imgResource}/${images[img]}.svg")`
+      }
     })
   );
 }
@@ -72,9 +73,8 @@ function getProgress(executionPoint) {
 function getClosestMessage(messages, executionPoint) {
   const progress = getProgress(executionPoint);
 
-  return sortBy(
-    messages,
-    message => Math.abs(progress - getMessageProgress(message))
+  return sortBy(messages, message =>
+    Math.abs(progress - getMessageProgress(message))
   )[0];
 }
 
@@ -90,7 +90,7 @@ function getClosestMessage(messages, executionPoint) {
 class WebReplayPlayer extends Component {
   static get propTypes() {
     return {
-      toolbox: PropTypes.object,
+      toolbox: PropTypes.object
     };
   }
 
@@ -103,7 +103,7 @@ class WebReplayPlayer extends Component {
       recording: true,
       paused: false,
       messages: [],
-      highlightedMessage: null,
+      tickSize: 10
     };
     this.overlayWidth = 0;
   }
@@ -113,14 +113,10 @@ class WebReplayPlayer extends Component {
     this.threadClient.addListener("paused", this.onPaused.bind(this));
     this.threadClient.addListener("resumed", this.onResumed.bind(this));
     this.threadClient.addListener("progress", this.onProgress.bind(this));
-
-    this.toolbox.getPanelWhenReady("webconsole").then(panel => {
-      const consoleFrame = panel.hud.ui;
-      consoleFrame.on("message-hover", this.onConsoleMessageHover.bind(this));
-      consoleFrame.consoleOutput.subscribeToStore(
-        this.onConsoleUpdate.bind(this)
-      );
-    });
+    this.activeConsole._client.addListener(
+      "consoleAPICall",
+      this.onMessage.bind(this)
+    );
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -140,7 +136,11 @@ class WebReplayPlayer extends Component {
   }
 
   get threadClient() {
-    return this.toolbox.threadClient;
+    return this.props.toolbox.threadClient;
+  }
+
+  get activeConsole() {
+    return this.props.toolbox.target.activeConsole;
   }
 
   isRecording() {
@@ -162,7 +162,10 @@ class WebReplayPlayer extends Component {
   onPaused(_, packet) {
     if (packet && packet.recordingEndpoint) {
       const { executionPoint, recordingEndpoint } = packet;
-      const closestMessage = getClosestMessage(this.state.messages, executionPoint);
+      const closestMessage = getClosestMessage(
+        this.state.messages,
+        executionPoint
+      );
 
       this.setState({
         executionPoint,
@@ -170,7 +173,7 @@ class WebReplayPlayer extends Component {
         paused: true,
         seeking: false,
         recording: false,
-        closestMessage,
+        closestMessage
       });
     }
   }
@@ -200,45 +203,27 @@ class WebReplayPlayer extends Component {
     this.setState(newState);
   }
 
-  onConsoleUpdate(consoleState) {
-    const {
-      messages: { visibleMessages, messagesById },
-    } = consoleState;
-    const messages = visibleMessages.map(id => messagesById.get(id));
-
-    if (visibleMessages != this.state.visibleMessages) {
-      this.setState({ messages, visibleMessages });
-    }
-  }
-
-  onConsoleMessageHover(type, message) {
-    if (type == "mouseleave") {
-      return this.setState({ highlightedMessage: null });
-    }
-
-    if (type == "mouseenter") {
-      return this.setState({ highlightedMessage: message.id });
-    }
-
-    return null;
+  onMessage(_, packet) {
+    this.setState({ messages: this.state.messages.concat(packet.message) });
   }
 
   scrollToMessage() {
-    const {closestMessage} = this.state;
+    const { closestMessage } = this.state;
 
     if (!closestMessage) {
       return;
     }
 
     const consoleOutput = this.console.hud.ui.outputNode;
-    const element =  consoleOutput
-      .querySelector(`.message[data-message-id="${closestMessage.id}"]`);
+    const element = consoleOutput.querySelector(
+      `.message[data-message-id="${closestMessage.id}"]`
+    );
 
     if (element) {
       const consoleHeight = consoleOutput.getBoundingClientRect().height;
       const elementTop = element.getBoundingClientRect().top;
       if (elementTop < 30 || elementTop + 50 > consoleHeight) {
-        element.scrollIntoView({block: "center", behavior: "smooth"});
+        element.scrollIntoView({ block: "center", behavior: "smooth" });
       }
     }
   }
@@ -327,32 +312,32 @@ class WebReplayPlayer extends Component {
       CommandButton({
         className: classname("", { active: paused || recording }),
         img: "previous",
-        onClick: () => this.previous(),
+        onClick: () => this.previous()
       }),
 
       CommandButton({
         className: classname("", { active: paused || recording }),
         img: "rewind",
-        onClick: () => this.rewind(),
+        onClick: () => this.rewind()
       }),
 
       CommandButton({
         className: classname(" primary", { active: !paused || seeking }),
         img: "pause",
-        onClick: () => this.pause(),
+        onClick: () => this.pause()
       }),
 
       CommandButton({
         className: classname("", { active: paused }),
         img: "resume",
-        onClick: () => this.resume(),
+        onClick: () => this.resume()
       }),
 
       CommandButton({
         className: classname("", { active: paused }),
         img: "next",
-        onClick: () => this.next(),
-      }),
+        onClick: () => this.next()
+      })
     ];
   }
 
@@ -375,7 +360,7 @@ class WebReplayPlayer extends Component {
   }
 
   renderMessage(message, index) {
-    const { messages, executionPoint, highlightedMessage } = this.state;
+    const { messages, executionPoint } = this.state;
 
     const offset = this.getOffset(message.executionPoint);
     const previousMessage = messages[index - 1];
@@ -393,26 +378,53 @@ class WebReplayPlayer extends Component {
       this.getDistanceFrom(message.executionPoint, executionPoint) >
       markerWidth / 2;
 
-    const isHighlighted = highlightedMessage == message.id;
-
     return dom.a({
       className: classname("message", {
         overlayed: isOverlayed,
-        future: isFuture,
-        highlighted: isHighlighted,
+        future: isFuture
       }),
       style: {
         left: `${offset - markerWidth / 2}px`,
-        zIndex: `${index + 100}`,
+        zIndex: `${index + 100}`
       },
       title: getFormatStr("jumpMessage", index + 1),
-      onClick: () => this.seek(message.executionPoint),
+      onClick: () => this.seek(message.executionPoint)
     });
   }
 
   renderMessages() {
     const messages = this.state.messages;
     return messages.map((message, index) => this.renderMessage(message, index));
+  }
+
+  renderTicks() {
+    const { tickSize } = this.state;
+    const ticks = (this.overlayWidth || 10) / tickSize;
+    return range(Math.round(ticks)).map((value, index) =>
+      this.renderTick(index)
+    );
+  }
+
+  renderTick(index) {
+    const { executionPoint, tickSize } = this.state;
+    const offset = Math.round(this.getOffset(executionPoint));
+    const position = index * tickSize;
+    const isFuture = offset > position;
+
+    return dom.span({
+      className: classname("tick", {
+        future: isFuture
+      }),
+      style: {
+        left: `${position}px`,
+        width: `${tickSize}px`
+      },
+      onClick: () => {
+        const newPercent = Math.round((position * 100) / this.overlayWidth);
+        const size = newPercent / tickSize + tickSize;
+        this.setState({ tickSize: size });
+      }
+    });
   }
 
   getPercent(executionPoint) {
@@ -432,31 +444,48 @@ class WebReplayPlayer extends Component {
   render() {
     const percent = this.getPercent(this.state.executionPoint);
     const recording = this.isRecording();
+    const self = this;
     return div(
-      { className: "webreplay-player" },
+      {
+        className: "webreplay-player"
+      },
       div(
         {
           id: "overlay",
-          className: classname("", { recording: recording, paused: !recording }),
+          className: classname("", { recording: recording, paused: !recording })
         },
         div(
           { className: "overlay-container " },
           div({ className: "commands" }, ...this.renderCommands()),
           div(
-            { className: "progressBar" },
+            {
+              className: "progressBar",
+              onMouseDown: () => {
+                const e = window.event;
+
+                console.log(document.elementFromPoint(e.clientX, e.clientY));
+              },
+              onMouseMove: () => {
+                console.log("move");
+              },
+              onMouseUp: () => {
+                console.log("up");
+              }
+            },
             div({
               className: "progress",
-              style: { width: `${percent}%` },
+              style: { width: `${percent}%` }
             }),
             div({
               className: "progress-line",
-              style: { width: `${percent}%` },
+              style: { width: `${percent}%` }
             }),
             div({
               className: "progress-line end",
-              style: { left: `${percent}%`, width: `${100 - percent}%` },
+              style: { left: `${percent}%`, width: `${100 - percent}%` }
             }),
-            ...this.renderMessages()
+            ...this.renderMessages(),
+            ...this.renderTicks()
           )
         )
       )

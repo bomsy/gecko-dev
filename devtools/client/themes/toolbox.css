@@ -461,8 +461,8 @@
   box-sizing: border-box;
   min-height: 29px;
 
-  --progress-recording-background: hsl(0, 100%, 97%);
-  --progress-playing-background: hsl(207, 100%, 97%);
+  --progress-recording-background: #ffebeb;
+  --progress-playing-background: #ebf6ff;
 
   --progress-bar-transition: 200ms;
 
@@ -491,17 +491,6 @@
   height: 100%;
   background: var(--progress-playing-background);
   transition-duration: var(--progress-bar-transition);
-}
-
-.webreplay-player #overlay:not(.recording) .progress::after {
-  background: var(--purple-50);
-  width: 1px;
-  height: 100%;
-  right: 0;
-  opacity: 0.4;
-  display: block;
-  content: "";
-  position: absolute;
 }
 
 .webreplay-player .recording .progress {
@@ -560,6 +549,42 @@
   transform: scale(0.1);
 }
 
+.webreplay-player .tick {
+  position: absolute;
+  height: 100%;
+}
+
+.webreplay-player .recording .tick.future::before,
+.webreplay-player .recording .tick.future::after {
+  background: #d0021b;
+}
+.webreplay-player .tick.future::before,
+.webreplay-player .tick.future::after {
+  background: var(--blue-50);
+}
+
+.webreplay-player .tick::before {
+  height: 1.5px;
+  width: 1px;
+  background: #bfc9d2;
+  top: 0;
+  right: 0;
+  position: absolute;
+  content: "";
+  display: block;
+}
+
+.webreplay-player .tick::after {
+  height: 1.5px;
+  width: 1px;
+  background: #bfc9d2;
+  bottom: 0;
+  right: 0;
+  position: absolute;
+  content: "";
+  display: block;
+}
+
 .webreplay-player .commands {
   display: flex;
 }
@@ -614,7 +639,7 @@
 .webreplay-player .progress-line {
   width: 0%;
   height: 1px;
-  background: var(--blue-40);
+  background: #0074e8;
   position: absolute;
   left: 0;
   top: 50%;
